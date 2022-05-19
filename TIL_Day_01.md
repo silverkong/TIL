@@ -1,0 +1,185 @@
+# TIL Day 01
+
+> 2022년 05월 19일 목요일
+
+
+
+## Why Git & Github? 
+
+![git logo](https://user-images.githubusercontent.com/49775540/168756716-68f9aebb-380f-4897-8141-78d8403f6113.png)
+
+### Git
+
+- 분산 버전 관리 프로그램
+
+  > 과제할 때 우리가 사용하던 ~~최최최최종버전~~을 벗어나자
+  >
+  > git을 이용하면 진짜 최종 파일이 무엇인지 알 수 있다. (날짜, 시간, 이력 등 버전을 관리해준다)
+
+- **백업, 복구, 협업**을 위해 사용
+
+- [Git 공식문서](https://git-scm.com/book/ko/v2)
+
+### Github
+
+- Git을 사용하는 프로젝트의 협업을 위한 웹호스팅 서비스
+
+- 포트폴리오를 자랑할 수 있는 공간
+
+- 1일 1커밋 하기
+
+  > 잔디를 깔아서 증명해보자! 꾸준함을 보여줄 수 있음
+
+- [이동욱님 Github 계정](https://github.com/jojoldu)
+
+
+
+## CLI
+
+> CLI (Command Line Interface, 커맨드 라인 인터페이스)는 터미널을 통해 사용자와 컴퓨터가 상호 작용하는 방식을 뜻한다.
+
+
+
+### 터미널 명령어 정리
+
+| 명령어 |              설명               |
+| :----: | :-----------------------------: |
+| mkdir  |            폴더 생성            |
+| touch  |            파일 생성            |
+|   ls   |   현재 폴더의 파일 목록 출력    |
+|   cd   |        다른 폴더로 이동         |
+|   rm   | 파일 삭제 / 폴더 삭제 (-r 옵션) |
+
+### 예시
+
+```bash
+% mkdir test		// test 폴더 생성
+
+% touch a.txt		// a.txt 파일 생성
+
+% ls						// 현재 폴더의 파일 목록 출력
+% ls -a					// 숨겨진 파일 목록도 출력
+
+% cd ..					// 부모 폴더로 이동(상위)
+% cd test				// test 폴더로 이동
+
+% rm a.txt			// a.txt 파일 삭제
+% rm -r test		// test 폴더 삭제 : 폴더는 -r 이라는 옵션을 사용해야 함
+```
+
+
+
+##  Visual Studio Code
+
+> Visual Studio Code (비주얼 스튜디오 코드)는 마이크로소프트에서 개발한 텍스트 에디터의 한 종류이다.
+
+
+
+### 장점
+
+- Windows, Mac, Linux 운영체제를 모두 지원한다.
+- 기존 개발 도구보다 빠르고 가볍다.
+- Extension을 통해 다양한 기능을 설치할 수 있어서, 무한한 확장성을 가진다.
+- 무료로 사용 가능하다.
+
+### Git Bash 연동하기
+
+1. 터미널을 연다. (Ctrl + `)
+2. 화살표를 누르고 Select Default Profile을 클릭한다.
+3. Git Bash를 선택한다.
+   - Mac은 zsh와 bash 둘 중 하나 (zsh 써도 상관없다)
+4. 휴지통을 눌러서 터미널을 종료하고, 재시작한다.
+   - 휴지통은 Kill Terminal 로써, 터미널 자체를 아예 종료한다.
+   - 닫기는 Close Terminal 로써, 터미널을 종료하지 않고 창만 보이지 않게 만든다.
+5. 기본 터미널이 Git Bash로 열리는지 확인한다.
+
+
+
+## Markdown
+
+>  Markdown (마크다운)은 일반 텍스트 기반의 경량 Markup (마크업) 언어이다.
+
+
+
+### Markup (마크업) 이란?
+
+- 마크(Mark)로 둘러싸인 언어를 뜻한다. 마크란 글의 **역할**을 지정하는 표시이다.
+- HTML도 마크업 언어인데, 글에 제목의 역할을 부여할 때 `<h1>제목1</h1>` 과 같이 작성한다.
+  - HTML : Hyper Text Markup Language
+
+
+### 마크다운의 장점과 단점
+
+1. 장점
+   - 문법이 직관적이고 쉽다.
+   - 지원 가능한 플랫폼과 프로그램이 다양하다.
+2. 단점
+   - 표준이 없어서 사용자마다 문법이 상이하다.
+   - 모든 HTML의 기능을 대신하지는 못한다.
+
+### 주의 사항
+
+- 마크다운의 본질은 글에 역할을 부여하는 것이다.
+- 반드시 역할에 맞는 마크다운 문법을 작성한다. 글씨를 키우고 싶다고 해서 본문에 제목의 역할을 부여하면 안된다.
+
+### 참고 자료
+
+- [Markdown Guide](https://www.markdownguide.org/basic-syntax/)
+- [마크다운 문법 정리](https://gist.github.com/ihoneymon/652be052a0727ad59601)
+
+
+
+## Git 기초
+
+
+
+### Git 초기 설정 방법
+
+> 최초 한 번만 설정, 매번 설정할 필요 없음
+
+
+
+1. 이름 및 이메일 설정
+
+   - 누가 커밋했는지 알아보기 위함
+   - github에 사용하는 username과 email 사용할 것
+
+   ```bash
+   % git config --global user.name "username"
+   % git config --global user.email "email"
+   ```
+
+   - 이때, 작성하고 아무 반응이 없다면 정상적으로 작동한 것
+
+2. 설정 확인
+
+   ```bash
+   % git config --global --list
+   user.name=username
+   user.email=email
+   ```
+
+   - 하단에 정상적으로 뜬다면 설정 완료!
+
+
+
+### Git 기본 명령어
+
+#### 0. 로컬 저장소
+
+- `Working Directory (= Working Tree)` : 사용자의 작업이 일어나는 곳
+- `Staging Area (= Index)` : 커밋을 위한 파일 및 폴더가 추가되는 곳
+- `Repository` : Staging Area에 있던 파일 및 폴더의 변경사항(커밋)을 저장하는 곳
+- Git은 **Working Directory > Staging Area > Repository**의 과정으로 버전 관리 수행
+
+
+
+#### 1. git init
+
+> 로컬 저장소로 지정한다는 명령어 / 한 번만 수행해도 됨
+
+```bash
+% git init
+~ 초기화 한 후 저장소로 지정
+```
+
