@@ -1,10 +1,4 @@
-# TIL Day 02
-
-> 2022년 05월 20일 금요일
-
-
-
-## Git 기초
+# Git 기초
 
 
 
@@ -56,8 +50,7 @@
 
 
 ```bash
-% git init
-~ 초기화 한 후 저장소로 지정
+% git init	# 초기화 한 후 저장소로 지정
 ```
 
 - `.git` 이라는 숨김 폴더를 생성하고, 터미널에는 `(master)`라고 표기됨
@@ -72,7 +65,7 @@
 
 
 
-#### git status
+#### 2. git status
 
 > 파일의 현재 상태를 알려주는 명령어 / 뭘 해야할지 모르겠다면 수시로 git status를 쳐서 확인
 
@@ -91,20 +84,60 @@
 
 
 
-#### git add
+#### 3. git add
 
 > Working Directory에 있는 파일을 Staging Area로 올리는 명령어
 
 
 
 ```bash
-% git add 파일명.파일확장자		//특정 파일
+# 특정 파일
+% git add 파일명.파일확장자
 
+# 특정 폴더
+% git add 폴더명/
+
+# 현재 디렉토리 파일/폴더 전부
+% git add .
 ```
 
+- `Untracked`, `Modified` 상태를 `Staged` 상태로 변경
 
 
 
+#### 4. git commit
+
+> Staging Area에 올라온 파일의 변경사항을 하나의 버전(커밋)으로 저장하는 명령어
+
+
+
+``` bash
+% git commit -m "커밋 메세지"
+```
+
+- `커밋 메세지` 는 현재 변경 사항을 잘 나타낼 수 있도록 의미있게 작성
+- 각각 커밋은 SHA-1 알고리즘에 의해 반환된 고유의 해시 값을 ID로 가짐
+- `root-commit` 은 해당 커밋이 최초의 커밋일 때만 표시
+
+
+
+#### 5. git log
+
+> 커밋의 내역을 조회할 수 있는 명령어
+
+
+
+```bash
+% git log
+
+#옵션
+% git log --oneline	# 한 줄로 축약해서 보여줌
+% git log --graph		# 브랜치와 머지 내역을 그래프로 보여줌
+% git log --all			# 현재 브랜치를 포함한 모든 브랜치 내역 보여줌
+% git log --reverse # 커밋 내역의 순서를 반대로 보여줌(최신이 가장 아래)
+% git log --p				# 파일의 변경 내용도 같이 보여줌
+% git log --2				# 원하는 갯수만큼 내역 보여줌(2말고 임의 숫자 가능)
+```
 
 
 
