@@ -47,3 +47,30 @@
 - ```java
 Child child = (Child)parent;	//강제 타입 변환
 
+
+
+
+
+### instanceof 연산자
+
+> 객체 타입을 확인하는 연산자
+
+
+
+- 참조 변수가 참조하고 있는 인스턴스 실제 타입 확인
+- 부모 타입으로 변환되어 있는 상태에서만 강제 타입 변환이 가능
+  - 아니면 ClassCastException 예외 발생
+
+- `boolean result = 참조변수 instanceof 타입(클래스명)`
+
+- ```java
+  public static void method1(Parent parent) {
+    //강제 타입 변환하기 전에 instanceof 연산자로 먼저 확인
+    if(parent instanceof Child) {
+      //Child c = (Child)parent;
+      System.out.println("method1 - Child 로 변환 성공");
+    }else {
+      System.out.println("method1 - Child 로 변환 실패");
+    }
+  }
+  ```
