@@ -241,6 +241,8 @@
 [리디 - 풀스택 엔지니어](https://www.jobplanet.co.kr/job/search?q=%ED%92%80%EC%8A%A4%ED%83%9D%20%EC%97%94%EC%A7%80%EB%8B%88%EC%96%B4&posting_ids%5B%5D=1232731)
 
 
+
+
 ### (주)우아한 형제들
 
 #### B마트플랫폼 백엔드 개발자
@@ -251,11 +253,12 @@
 - 단위/통합 테스트코드 작성이 가능하신 분
 - 우아한형제들의 개발 문화에 동의하시는 분
 - 다음 기술에 익숙하신 분
-- 자바 8 이상
-- 스프링 프레임워크, 스프링 부트, 기타 자바 EE 기술
-- JPA
-- Git, Jira, Wiki 등의 협업 도구
--  jUnit과 테스트코드 작성 라이브러리
+  - 자바 8 이상
+  - 스프링 프레임워크, 스프링 부트, 기타 자바 EE 기술
+  - JPA
+  - Git, Jira, Wiki 등의 협업 도구
+  - jUnit과 테스트코드 작성 라이브러리
+
 
 ##### 우대사항
 - B마트(quick-commerce) 서비스에 대하여 관심이 있으며, 적극적인 자세로 Product를 제안하고 만들어 갈 수 있는 분
@@ -270,6 +273,8 @@
 
 ###### 링크
 [B마트 - 백엔드 개발자](https://www.jobplanet.co.kr/job/search?q=%EC%9A%B0%EC%95%84%ED%95%9C%ED%98%95%EC%A0%9C%EB%93%A4%2C%20AWS%2C%20MySQL%2C%20Java%2C%20Spring%20Framework%2C%20JPA&posting_ids%5B%5D=1230225)
+
+
 
 
 ## 사람인
@@ -337,3 +342,25 @@
 
 ###### 링크
 [잔디 - 백엔드 개발](https://www.jobkorea.co.kr/Recruit/GI_Read/38453429?Oem_Code=C1&logpath=1&stext=%EB%B0%B1%EC%97%94%EB%93%9C&listno=18)
+
+
+
+
+
+## 공통 자격요건 & 우대사항
+
+### 공통 자격요건
+
+1. Spring framework 기반 서버 개발 경험
+2. RESTful API 구현 경험
+3. RDBMS 경험 / 다양한 데이터베이스에 대한 지식을 보유하신 분
+
+
+
+### 공통 우대사항
+
+1. AWS를 활용한 서버 배포 경험
+2. 동료와 원활한 협업이 가능한 커뮤니케이션 역량
+3. React 경험자
+4. Nodejs 경험자
+5. 웹 프론트엔드 개발 능력과 UI에 대한 기본 지식 및 경험자
