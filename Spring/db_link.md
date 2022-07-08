@@ -150,20 +150,6 @@
              "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
            ```
          
-         - Mapper에 mapper와 resultMap 추가
-         
-           ```xml
-           <mapper namespace="com.spring_mvc.mybatis.dao.IProductDAO">
-             <resultMap id="prdResult" type="com.spring_mvc.mybatis.model.ProductVO" >
-                 <result property="prdNo" column="prdNo"/>
-                 <result property="prdName" column="prdName"/>
-                 <result property="prdPrice" column="prdPrice"/>
-                 <result property="prdCompany" column="prdCompany"/>
-                 <result property="prdStock" column="prdStock"/>
-             </resultMap>
-           </mapper>
-           ```
-         
          - application-config.xml에 dao 패키지 추가
          
            ```xml
@@ -211,11 +197,21 @@
         - ProductMapper에서 SQL 처리하고 결과 반환
 
           ```xml
-          <!-- 전체 상품 조회  -->
-          <!-- 주의! id는 IProductDAO의 각 메소드 이름과 동일해야 함  -->
-          <select id="listAllProduct" resultMap="prdResult">
-            SELECT * FROM product ORDER BY prdNo
-          </select>
+          <mapper namespace="com.spring_mvc.mybatis.dao.IProductDAO">
+            <resultMap id="prdResult" type="com.spring_mvc.mybatis.model.ProductVO" >
+                <result property="prdNo" column="prdNo"/>
+                <result property="prdName" column="prdName"/>
+                <result property="prdPrice" column="prdPrice"/>
+                <result property="prdCompany" column="prdCompany"/>
+                <result property="prdStock" column="prdStock"/>
+            </resultMap>
+            
+            <!-- 전체 상품 조회  -->
+            <!-- 주의! id는 IProductDAO의 각 메소드 이름과 동일해야 함  -->
+            <select id="listAllProduct" resultMap="prdResult">
+              SELECT * FROM product ORDER BY prdNo
+            </select>
+          </mapper>
           ```
 
       - ProductService에서 받아서 ProductController에게 반환
@@ -453,6 +449,24 @@
         }
         ```
 
+      - redirect 주의!
+
+        `return "redirect:./productAllList";` 했을 경우 redirect 횟수가 많다는 오류 발생
+
+        - `return "redirect:/product/productAllList";` 로 사용
+
         
 
-      
+8. 해당하는 페이지 경로 작성 시 유의 할 점
+
+    `<a href="newView"> new View 페이지 </a>`
+
+    - 상대경로로 찾기 때문에 현재 경로를 기준으로 newView 요청 경로를 찾음
+    - index.jsp에서는 ContextPath(/project)를 기준으로 찾고
+    - productNewForm.jsp에서는 /project/student 기준으로 찾음
+    - 기준 경로에 따라 페이지를 못 찾을 수 있음
+    - 따라서 2가지 방법으로 사용
+      1. ContextPath부터 적음
+      2. <c:url value="/"> 사용 (/ : ContextPath)
+
+    
