@@ -27,30 +27,30 @@
    - web.xml 한글 인코딩
 
      ```xml
-       <!-- 한글설정 -->
-       	<filter>
-       		<filter-name>encodingFilter</filter-name>
-       		<filter-class>
-             		org.springframework.web.filter.CharacterEncodingFilter
-       		</filter-class>
-       
-       		<init-param>
-       			<param-name>encoding</param-name>
-       			<param-value>UTF-8</param-value>
-       		</init-param>
-       
-       		<init-param>
-       			<param-name>forceEncoding</param-name>
-       			<param-value>true</param-value>
-       		</init-param>
-       	</filter>
-       
-       	<filter-mapping>
-       		<filter-name>encodingFilter</filter-name>
-       		<url-pattern>/*</url-pattern>
-       	</filter-mapping>
-       
-       	<!-- 한글설정 END -->
+     <!-- 한글설정 -->
+     <filter>
+       <filter-name>encodingFilter</filter-name>
+       <filter-class>
+         org.springframework.web.filter.CharacterEncodingFilter
+       </filter-class>
+     
+       <init-param>
+         <param-name>encoding</param-name>
+         <param-value>UTF-8</param-value>
+       </init-param>
+     
+       <init-param>
+         <param-name>forceEncoding</param-name>
+         <param-value>true</param-value>
+       </init-param>
+     </filter>
+     
+     <filter-mapping>
+       <filter-name>encodingFilter</filter-name>
+       <url-pattern>/*</url-pattern>
+     </filter-mapping>
+     
+     <!-- 한글설정 END -->
      ```
 
        **해당 부분까지 완료 후 실행시켜서 오류 있는 지 확인**
@@ -76,6 +76,7 @@
 
    - jdbc.properties 파일 생성
 
+     - src/main/resource 폴더 내 database 폴더 생성
      - jdbc.dirverClassName=com.mysql.cj.jdbc.Driver
      - jdbc.url=jdbc:mysql://localhost:3306/schemaName?serverTimezone-UTC
      - jdbc.username=root
@@ -83,7 +84,7 @@
 
    - 스프링 설정 파일 생성 : application-config.xml
 
-     - src/main/resource 폴 내 spring 폴더 생성
+     - src/main/resource 폴더 내 spring 폴더 생성
 
      - application-config.xml 생성
 
@@ -92,32 +93,32 @@
      - DataSource / Mapper 지정
 
        ```xml
-         <context:property-placeholder location="classpath:database/jdbc.properties"/>
-         <context:component-scan base-package="com.spring_mvc.mybatis"/>
-         	
-         <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
-           <property name="driverClassName" value="${jdbc.driverClassName}"/>
-           <property name="url" value="${jdbc.url}"/>
-           <property name="username" value="${jdbc.username}"/>
-           <property name="password" value="${jdbc.password}"/>
-         </bean>
-         	
-         <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
-         		<property name="dataSource" ref="dataSource"/>
-         		<property name="mapperLocations" 	
-                       value="classpath:com/spring_mvc/mybatis/**/*.xml"/>
-         </bean>
+       <context:property-placeholder location="classpath:database/jdbc.properties"/>
+       <context:component-scan base-package="com.spring_mvc.mybatis"/>
+       
+       <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+         <property name="driverClassName" value="${jdbc.driverClassName}"/>
+         <property name="url" value="${jdbc.url}"/>
+         <property name="username" value="${jdbc.username}"/>
+         <property name="password" value="${jdbc.password}"/>
+       </bean>
+       
+       <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+         <property name="dataSource" ref="dataSource"/>
+         <property name="mapperLocations" 	
+                   value="classpath:com/spring_mvc/mybatis/**/*.xml"/>
+       </bean>
        ```
-     
+
    - web.xml에 변경된 내용 설정
 
      - application-config.xml 사용한다고 설정
 
        ```xml
-        <context-param>
-           <param-name>contextConfigLocation</param-name>
-           <param-value>classpath:/spring/application-config.xml</param-value>
-         </context-param>
+       <context-param>
+         <param-name>contextConfigLocation</param-name>
+         <param-value>classpath:/spring/application-config.xml</param-value>
+       </context-param>
        ```
 
          **해당 부분까지 완료 후 실행시켜서 오류 있는 지 확인!**
@@ -128,14 +129,15 @@
    - package 생성
       - model
         - vo.java
-   	  
+   	  - getter / setter
+        
       - service
       
         - iService.java
         - service.java
          - interface iService
          - Qualifier import 시 beans.factory.annotation.Qualifier로 임포트
-      
+     
      - dao
        - dao.java
          - MyBatis에서는 DAO 인터페이스 필수
@@ -150,10 +152,16 @@
              "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
            ```
          
+         - mapper에  namespace 설정
+         
+           ```xml
+           <mapper namespace="com.spring_mvc.book.dao.IBookDAO"></mapper>
+           ```
+         
          - application-config.xml에 dao 패키지 추가
          
            ```xml
-            <mybatis-spring:scan base-package="com.spring_mvc.mybatis.dao"/>
+           <mybatis-spring:scan base-package="com.spring_mvc.mybatis.dao"/>
        
      - controller
        - controller.java
@@ -321,7 +329,7 @@
 
         ```xml
         <!--  상품 상세 정보 조회 -->
-        <select id="detailViewProduct" parameterType="String" 
+        <select id="detailViewProduct" parameterType="string" 
                 resultType="com.spring_mvc.mybatis.model.ProductVO">
           SELECT * FROM product WHERE prdNo=#{prdNo}
         </select>
@@ -435,7 +443,7 @@
 
         ```xml
         <!--상품 정보 삭제-->
-        <delete id="deleteProduct" parameterType="String">
+        <delete id="deleteProduct" parameterType="string">
           DELETE FROM product WHERE prdNo=#{prdNo}
         </delete>
         ```
@@ -456,6 +464,33 @@
         - `return "redirect:/product/productAllList";` 로 사용
 
         
+
+   6. 이미지 출력
+
+      - 프로젝트 내부에 저장하는 경우
+
+        - webapp / resources 폴더에 images 폴더 생성 후 그 안에 저장
+
+        - 프로젝트에서 사용하는 이미지
+
+        - ContextPath로 작성
+
+        - spring / appServlet의 servlet-context.xml에 맵핑 변경하여 사용하면 경로 더 짧게 작성 가능
+
+          ```xml
+          <!-- 이미지 폴더 맵핑 이름 변경 -->
+          <resources mapping="/img/**" location="/resources/images/" />
+          ```
+
+      - 프로젝트 외부에 저장하는 경우
+
+        - 외부에 폴더 생성 후 맵핑 작성
+
+          ```xml
+          <resources mapping="/images/**" location="file:///내 경로/product_images/" />
+          ```
+
+          
 
 8. 해당하는 페이지 경로 작성 시 유의 할 점
 
