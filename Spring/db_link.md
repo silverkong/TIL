@@ -138,14 +138,14 @@
             ```
         
          - Views에서는 fmt 사용해야함
-       
+      
            ```jsp
            <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
            <fmt:formatDate pattern='yyyy-MM-dd' value='${prd.prdDate}'/>
            ```
-       
+      
        - getter / setter
-       
+      
      - service
      
        - iService.java
@@ -170,7 +170,7 @@
          - mapper에  namespace 설정
          
            ```xml
-           <mapper namespace="com.spring_mvc.book.dao.IBookDAO"></mapper>
+           <mapper namespace="com.spring_mvc.mybatis.dao.IProductDAO"></mapper>
            ```
          
          - application-config.xml에 dao 패키지 추가
