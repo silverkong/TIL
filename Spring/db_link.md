@@ -129,14 +129,29 @@
    - package 생성
       - model
         - vo.java
-   	  - getter / setter
+   	  
+          - 날짜 타입 적용하는 방법 : @DateTimeFormat이라는 어노테이션 사용
         
-      - service
-      
-        - iService.java
-        - service.java
-         - interface iService
-         - Qualifier import 시 beans.factory.annotation.Qualifier로 임포트
+            ```java
+            @DateTimeFormat(pattern="yyyy-MM-dd")
+            private Date prdDate;
+            ```
+        
+         - Views에서는 fmt 사용해야함
+       
+           ```jsp
+           <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+           <fmt:formatDate pattern='yyyy-MM-dd' value='${prd.prdDate}'/>
+           ```
+       
+       - getter / setter
+       
+     - service
+     
+       - iService.java
+       - service.java
+        - interface iService
+        - Qualifier import 시 beans.factory.annotation.Qualifier로 임포트
      
      - dao
        - dao.java
@@ -490,7 +505,7 @@
           <resources mapping="/images/**" location="file:///내 경로/product_images/" />
           ```
 
-          
+      
 
 8. 해당하는 페이지 경로 작성 시 유의 할 점
 
