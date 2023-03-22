@@ -1,9 +1,10 @@
 장에서 설명한 것처럼 데이터베이스 Call을 반복적으로 일으키는 프로그램을 One-SQL로 통합했을 때 얻는 성능개선 효과는 매우 극적이다. 본 절에서는 복잡한 처리절차를 One-SQL로 구현하는 데 적용할 수 있는 몇가지 유용한 기법들을 소개하고자 한다.
 
-1. CASE문 활용
-   [그림 Ⅲ-5-1] 왼쪽에 있는 월별납입방법별집계 테이블을 읽어 오른쪽 월요금납부실적과 같은 형태로 가공하려고 한다.
+# 1. CASE문 활용
 
-[그림 Ⅲ-5-1] 레코드를 칼럼으로 변환
+[그림 Ⅲ-5-1] 왼쪽에 있는 월별납입방법별집계 테이블을 읽어 오른쪽 월요금납부실적과 같은 형태로 가공하려고 한다.
+
+![그림 Ⅲ-5-1](https://dataonair.or.kr/publishing/img/knowledge/SQL_500.jpg)
 
 위와 같은 업무를 아래와 같은 SQL로 구현하는 개발자가 있을까 싶겠지만, 의외로 아주 많다.
 
@@ -15,37 +16,39 @@ INSERT INTO 월별요금납부실적 (고객번호, 납입월, 지로, 자동이
 
 참고로, SQL Server에선 2005 버전부터 Pivot 구문을 지원하고, Oracle도 11g부터 지원하기 시작했으므로 앞으론 이것을 쓰면 된다. 그렇지만, 위와 같이 CASE문이나 DECODE 함수를 활용하는 기법은 IFELSE 같은 분기조건을 포함한 복잡한 처리절차를 One-SQL로 구현하는 데 반드시 필요하고, 다른 비슷한 업무에도 응용할 수 있으므로 반드시 숙지하기 바란다.
 
-2. 데이터 복제 기법 활용
-   SQL을 작성하다 보면 데이터 복제 기법을 활용해야 할 때가 많다. 전통적으로 많이 쓰던 방식은 아래와 같은 복제용 테이블(copy_t)을 미리 만들어두고 이를 활용하는 것이다.
+# 2. 데이터 복제 기법 활용
 
-create table copy_t ( no number, no2 varchar2(2) ); insert into copy_t select rownum, lpad(rownum, 2, '0') from big_table where rownum <= 31; alter table copy_t add constraint copy_t_pk primary key(no); create unique index copy_t_no2_idx on copy_t(no2);
+SQL을 작성하다 보면 데이터 복제 기법을 활용해야 할 때가 많다. 전통적으로 많이 쓰던 방식은 아래와 같은 복제용 테이블(copy_t)을 미리 만들어두고 이를 활용하는 것이다.
+
+`create table copy_t ( no number, no2 varchar2(2) ); insert into copy_t select rownum, lpad(rownum, 2, '0') from big_table where rownum <= 31; alter table copy_t add constraint copy_t_pk primary key(no); create unique index copy_t_no2_idx on copy_t(no2);`
 
 이 테이블과 아래와 같이 조인절 없이 조인(Cross Join)하면 카티션 곱(Cartesian Product)이 발생해 데이터가 2배로 복제된다. 3배로 복제하려면 no <= 3 조건으로 바꿔주면 된다.
 
-select \* from emp a, copy_t b where b.no <= 2;
+`select \* from emp a, copy_t b where b.no <= 2;`
 
 Oracle 9i부터는 dual 테이블을 사용하면 편하다. 아래와 같이 dual 테이블에 start with절 없는 connect by 구문을 사용하면 두 레코드를 가진 집합이 자동으로 만들어진다. (9i에서는 버그가 있어 아래 쿼리를 인라인 뷰에 담을 때만 데이터 복제가 일어난다.)
 
-SQL> select rownum no from dual connect by level <= 2; NO -------- 1 2
+SQL> `select rownum no from dual connect by level <= 2; NO -------- 1 2`
 
 아래는 dual 테이블을 이용해 emp 테이블을 2배로 복제하는 예시다.
 
-SQL> select \* from emp a, (select rownum no from dual connect by level <= 2) b;
+SQL> `select \* from emp a, (select rownum no from dual connect by level <= 2) b;`
 
 이런 데이터 복제 기법은 다양한 업무 처리에 응용할 수 있다. 아래는 카드상품분류와 고객등급 기준으로 거래실적을 집계하면서 소계까지 한번에 구하는 방법을 예시한 것이다.
 
-SQL> break on 카드상품분류 SQL> select a.카드상품분류 2 ,(case when b.no = 1 then a.고객등급 else '소계' end) as 고객등급 3 , sum(a.거래금액) as 거래금액 4 from (select 카드.카드상품분류 as 카드상품분류 5 , 고객.고객등급 as 고객등급 6 , sum(거래금액) as 거래금액 7 from 카드월실적, 카드, 고객 8 where 실적년월 = '201008' 9 and 카드.카드번호 = 카드월실적.카드번호 10 and 고객,고객번호 = 카드.고객번호 11 group by 카드.카드상품분류, 고객.고객등급) a 12 , copy_t b 13 where b.no <= 2 14 group by a.카드상품분류, b.no, (case when b.no = 1 then a.고객등급 else '소계' end) 카드상품분류 고객등급 거래금액 -------- ------ --------- 상품분류A VIP 500000000 일반 300000000 소계0000000
+SQL> `break on 카드상품분류 SQL> select a.카드상품분류 2 ,(case when b.no = 1 then a.고객등급 else '소계' end) as 고객등급 3 , sum(a.거래금액) as 거래금액 4 from (select 카드.카드상품분류 as 카드상품분류 5 , 고객.고객등급 as 고객등급 6 , sum(거래금액) as 거래금액 7 from 카드월실적, 카드, 고객 8 where 실적년월 = '201008' 9 and 카드.카드번호 = 카드월실적.카드번호 10 and 고객,고객번호 = 카드.고객번호 11 group by 카드.카드상품분류, 고객.고객등급) a 12 , copy_t b 13 where b.no <= 2 14 group by a.카드상품분류, b.no, (case when b.no = 1 then a.고객등급 else '소계' end) 카드상품분류 고객등급 거래금액 -------- ------ --------- 상품분류A VIP 500000000 일반 300000000 소계0000000`
 
 상단에 있는 break 명령어는 카드상품분류가 반복적으로 출력되지 않도록 하기 위한 것으로서, Oracle SQL\*Plus에서만 사용 가능하다.
 
-3. Union All을 활용한 M:M 관계의 조인
-   M:M 관계의 조인을 해결하거나 Full Outer Join을 대체하는 용도로 Union All을 활용할 수 있다. [그림 Ⅲ-5-2]처럼 부서별판매계획과 채널별판매실적 테이블이 있다. 이 두 테이블을 이용해 월별로 각 상품의 계획 대비 판매 실적을 집계하려고 한다. 그런데 상품과 연월을 기준으로 볼 때 두 테이블은 M:M 관계이므로 그대로 조인하면 카티션 곱(Cartesian Product)이 발생한다.
+# 3. Union All을 활용한 M:M 관계의 조인
 
-[그림 Ⅲ-5-2] M:M 관계
+M:M 관계의 조인을 해결하거나 Full Outer Join을 대체하는 용도로 Union All을 활용할 수 있다. [그림 Ⅲ-5-2]처럼 부서별판매계획과 채널별판매실적 테이블이 있다. 이 두 테이블을 이용해 월별로 각 상품의 계획 대비 판매 실적을 집계하려고 한다. 그런데 상품과 연월을 기준으로 볼 때 두 테이블은 M:M 관계이므로 그대로 조인하면 카티션 곱(Cartesian Product)이 발생한다.
+
+![그림 Ⅲ-5-2](https://dataonair.or.kr/publishing/img/knowledge/SQL_501.jpg)
 
 아래와 같이 상품, 연월 기준으로 group by를 먼저 수행하고 나면 두 집합은 1:1 관계가 되므로 Full Outer Join을 통해 원하는 결과집합을 얻을 수 있다.
 
-select nvl(a.상품, b.상품) as 상품 , nvl(a.계획연월, b.판매연월) as 연월 , nvl(계획수량, 0) 계획수량 , nvl(판매수량, 0) 판매수량 from ( select 상품, 계획연월, sum(계획수량) 계획수량 from 부서별판매계획 where 계획연월 between '200901' and '200903' group by 상품, 계획연월 ) a full outer join ( select 상품, 판매연월, sum(판매수량) 판매수량 from 채널별판매실적 where 판매연월 between '200901' and '200903' group by 상품, 판매연월 ) b on a.상품 = b.상품 and a.계획연월 = b.판매연월
+`select nvl(a.상품, b.상품) as 상품 , nvl(a.계획연월, b.판매연월) as 연월 , nvl(계획수량, 0) 계획수량 , nvl(판매수량, 0) 판매수량 from ( select 상품, 계획연월, sum(계획수량) 계획수량 from 부서별판매계획 where 계획연월 between '200901' and '200903' group by 상품, 계획연월 ) a full outer join ( select 상품, 판매연월, sum(판매수량) 판매수량 from 채널별판매실적 where 판매연월 between '200901' and '200903' group by 상품, 판매연월 ) b on a.상품 = b.상품 and a.계획연월 = b.판매연월`
 
 하지만, DBMS와 버전에 따라 Full Outer Join을 아래와 같이 비효율적으로 처리하기도 한다. 한 테이블을 두 번씩 액세스하는 것을 확인하기 바란다.
 
@@ -53,18 +56,19 @@ Execution Plan ------------------------------------------------------------- 0 S
 
 좀 더 효과적인 방법을 찾기 위해, 우선 두 테이블을 이어서 출력해 보자.
 
-select '계획' as 구분, 상품, 계획연월 as 연월, 판매부서, null as 판매채널 , 계획수량, to_number(null) as 실적수량 from 부서별판매계획 where 계획연월 between '200901' and '200903' union all select '실적', 상품, 판매연월 as 연월, null as 판매부서, 판매채널 , to_number(null) as 계획수량, 판매수량 from 채널별판매실적 where 판매연월 between '200901' and '200903' 구분 ---- 계획 계획 계획 계획 계획 계획 계획 상품 ---- 상품A 상품A 상품A 상품B 상품B 상품C 상품C 연월 ---- 200901 200902 200903 200901 200902 200901 200903 판매부서 ------ 10 20 10 10 30 30 20 판매채널 ------ 계획수량 ------ 10000 5000 20000 20000 15000 15000 20000 실적수량 ----- 실적 실적 실적 실적 실적 실적 상품A 상품A 상품B 상품B 상품C 상품C 200901 200903 200902 200903 200901 200902 대리점 온라인 온라인 위탁 대리점 위탁 7000 8000 12000 19000 13000 18000
+`select '계획' as 구분, 상품, 계획연월 as 연월, 판매부서, null as 판매채널 , 계획수량, to_number(null) as 실적수량 from 부서별판매계획 where 계획연월 between '200901' and '200903' union all select '실적', 상품, 판매연월 as 연월, null as 판매부서, 판매채널 , to_number(null) as 계획수량, 판매수량 from 채널별판매실적 where 판매연월 between '200901' and '200903' 구분 ---- 계획 계획 계획 계획 계획 계획 계획 상품 ---- 상품A 상품A 상품A 상품B 상품B 상품C 상품C 연월 ---- 200901 200902 200903 200901 200902 200901 200903 판매부서 ------ 10 20 10 10 30 30 20 판매채널 ------ 계획수량 ------ 10000 5000 20000 20000 15000 15000 20000 실적수량 ----- 실적 실적 실적 실적 실적 실적 상품A 상품A 상품B 상품B 상품C 상품C 200901 200903 200902 200903 200901 200902 대리점 온라인 온라인 위탁 대리점 위탁 7000 8000 12000 19000 13000 18000`
 
 이렇게 두 집합을 함께 출력하고 보니 의외로 쉽게 방법이 찾아진다. 방금 출력한 전체 집합을 상품, 연월 기준으로 group by하면서 계획수량과 실적수량을 집계해 보자. 그러면 아래와 같이 월별 판매계획과 실적을 대비해서 보여줄 수 있다.
 
-select 상품, 연월, nvl(sum(계획수량), 0) as 계획수량, nvl(sum(실적수량), 0) as 실적수량 from ( select 상품, 계획연월 as 연월, 계획수량, to_number(null) as 실적수량 from 부서별판매계획 where 계획연월 between '200901' and '200903' union all select 상품, 판매연월 as 연월, to_number(null) as 계획수량, 판매수량 from 채널별판매실적 where 판매연월 between '200901' and '200903' ) a group by 상품, 연월 ; 상품 연월 계획수량 판매수량 ---- ------ ------- ------ 상품A 200901 10000 7000 상품A 200902 5000 0 상품A 200903 20000 8000 상품B 200901 20000 0 상품B 200902 15000 12000 상품B 200903 0 19000 상품C 200901 15000 13000 상품C 200902 0 18000 상품C 200903 20000 0
+`select 상품, 연월, nvl(sum(계획수량), 0) as 계획수량, nvl(sum(실적수량), 0) as 실적수량 from ( select 상품, 계획연월 as 연월, 계획수량, to_number(null) as 실적수량 from 부서별판매계획 where 계획연월 between '200901' and '200903' union all select 상품, 판매연월 as 연월, to_number(null) as 계획수량, 판매수량 from 채널별판매실적 where 판매연월 between '200901' and '200903' ) a group by 상품, 연월 ; 상품 연월 계획수량 판매수량 ---- ------ ------- ------ 상품A 200901 10000 7000 상품A 200902 5000 0 상품A 200903 20000 8000 상품B 200901 20000 0 상품B 200902 15000 12000 상품B 200903 0 19000 상품C 200901 15000 13000 상품C 200902 0 18000 상품C 200903 20000 0`
 
 이처럼 Union All을 이용하면 M:M 관계의 조인이나 Full Outer Join을 쉽게 해결할 수 있다. SQL Server에선 nvl 대신 isnull 함수를 사용하고, to_number 대신 cast 함수를 사용하기 바란다.
 
-4. 페이징 처리
-   1장에서 데이터베이스 Call과 네트워크 부하를 설명하면서 페이징 처리 활용의 중요성을 강조하였다. 조회할 데이터가 일정량 이상이고 수행빈도가 높다면 반드시 페이징 처리를 해야 한다는 것이 결론이었다. 그러면 어떻게 페이징 처리를 구현하는 것이 효과적인지, 지금부터 살펴보기로 하자. 페이징 처리는 출력방식에 대한 사용자 요건과 애플리케이션 아키텍처, 그리고 인덱스 구성 등에 따라 다양한 방법이 존재하므로 여기서 소개한 기본 패턴을 바탕으로 각 개발 환경에 맞게 응용하기 바란다. [그림 Ⅲ-5-3]에 있는 시간별종목거래 테이블을 예로 들어 설명해 보자.
+# 4. 페이징 처리
 
-[그림 Ⅲ-5-3] 시간별종목거래
+1장에서 데이터베이스 Call과 네트워크 부하를 설명하면서 페이징 처리 활용의 중요성을 강조하였다. 조회할 데이터가 일정량 이상이고 수행빈도가 높다면 반드시 페이징 처리를 해야 한다는 것이 결론이었다. 그러면 어떻게 페이징 처리를 구현하는 것이 효과적인지, 지금부터 살펴보기로 하자. 페이징 처리는 출력방식에 대한 사용자 요건과 애플리케이션 아키텍처, 그리고 인덱스 구성 등에 따라 다양한 방법이 존재하므로 여기서 소개한 기본 패턴을 바탕으로 각 개발 환경에 맞게 응용하기 바란다. [그림 Ⅲ-5-3]에 있는 시간별종목거래 테이블을 예로 들어 설명해 보자.
+
+![그림 Ⅲ-5-3](https://dataonair.or.kr/publishing/img/knowledge/SQL_502.jpg)
 
 가. 일반적인 페이징 처리용 SQL
 아래는 관심 종목에 대해 사용자가 입력한 거래일시 이후 거래 데이터를 페이징 처리 방식으로 조회하는 SQL이다.
@@ -97,7 +101,7 @@ SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM ( SELECT 거�
 
 SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM ( SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM 시간별종목거래 WHERE :페이지이동 = 'NEXT' -- 첫 페이지 출력 시에도 'NEXT' 입력 AND 종목코드 = :isu_cd AND 거래일시 >= :trd_time ORDER BY 거래일시 ) WHERE ROWNUM <= 11 UNION ALL SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM ( SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM 시간별종목거래 WHERE :페이지이동 = 'PREV' AND 종목코드 = :isu_cd AND 거래일시 <= :trd_time ORDER BY 거래일시 DESC ) WHERE ROWNUM <= 11 ORDER BY 거래일시
 
-5. 윈도우 함수 활용
+1. 윈도우 함수 활용
    초기 RDBMS에서는 행(Row) 간 연산을 할 수 없다는 제약 때문에 복잡한 업무를 집합적으로 처리하는 데 한계가 많았다. 이 때문에 앞서 소개한 데이터 복제 기법을 이용해 SQL을 복잡하고 길게 작성해야 했고, 이마저도 어려울 땐 절차적 방식으로 프로그래밍 하곤 했다. 물론 지금도 행 간 연산을 지원하지 않지만 윈도우 함수(Window Function)가 도입되면서 복잡한 SQL을 어느 정도 단순화할 수 있게 되었다. Oracle에 의해 처음 소개된 윈도우 함수(Oracle에서는 ‘분석 함수(Analytic Function)’라고 함)가 지금은 ANSI 표준으로 채택돼 대부분 DBMS에서 지원하고 있다. 분석함수에 대해서는 2과목에서 이미 설명하였으므로 여기서는 이를 활용한 사례를 간단히 살펴보기로 하자. [그림 Ⅲ-5-4] 좌측처럼 장비측정 결과를 저장하는 테이블이 있다. 일련번호를 1씩 증가시키면서 측정값을 입력하고, 상태코드는 장비상태가 바뀔 때만 저장한다.
 
 [그림 Ⅲ-5-4] 장비측정 결과
