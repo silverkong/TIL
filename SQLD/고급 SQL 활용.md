@@ -70,7 +70,8 @@ Execution Plan ------------------------------------------------------------- 0 S
 
 ![그림 Ⅲ-5-3](https://dataonair.or.kr/publishing/img/knowledge/SQL_502.jpg)
 
-가. 일반적인 페이징 처리용 SQL
+### 가. 일반적인 페이징 처리용 SQL
+
 아래는 관심 종목에 대해 사용자가 입력한 거래일시 이후 거래 데이터를 페이징 처리 방식으로 조회하는 SQL이다.
 
 SELECT _ FROM ( SELECT ROWNUM NO, 거래일시, 체결건수 , 체결수량, 거래대금, COUNT(_) OVER () CNT ……………………………………… ① FROM ( SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM 시간별종목거래 WHERE 종목코드 = :isu_cd -- 사용자가 입력한 종목코드 AND 거래일시 >= :trd_time -- 사용자가 입력한 거래일자 또는 거래일시 ORDER BY 거래일시 ……………………………………………………………………………………… ② ) WHERE ROWNUM <= :page*:pgsize+1 ………………………………………………………………… ③ ) WHERE NO BETWEEN (:page-1)*:pgsize+1 AND :pgsize\*:page …………………………… ④ Execution Plan ------------------------------------------------------------- 0 SELECT STATEMENT Optimizer=ALL_ROWS (Cost=5 Card=1 Bytes=75) 1 0 FILTER 2 1 VIEW (Cost=5 Card=1 Bytes=75) 3 2 WINDOW (BUFFER) (Cost=5 Card=1 Bytes=49) 4 3 COUNT (STOPKEY) 5 4 VIEW (Cost=5 Card=1 Bytes=49) 6 5 TABLE ACCESS (BY INDEX ROWID) OF '시간별종목거래' (TABLE) (Card=1 Bytes=56) 7 6 INDEX (RANGE SCAN) OF '시간별종목거래\_PK' (INDEX (UNIQUE)) (Card=1)
@@ -81,7 +82,8 @@ SELECT _ FROM ( SELECT ROWNUM NO, 거래일시, 체결건수 , 체결수량, 거
 
 성능과 I/O 효율을 위해서는 [종목코드 + 거래일시] 순으로 구성된 인덱스가 필요하며, 이 인덱스의 도움을 받을 수만 있다면 정렬작업을 수행하지 않아도 되므로 전체 결과집합이 아무리 크더라도 첫 페이지만큼은 가장 최적의 수행 속도를 보인다. 따라서 사용자가 주로 앞쪽 일부 데이터만 조회할 때 아주 효과적인 구현방식이다. 실제 대부분 업무에서 앞쪽 일부만 조회하므로 표준적인 페이징 처리 구현 패턴으로 가장 적당하다고 하겠다.
 
-나. 뒤쪽 페이지까지 자주 조회할 때
+### 나. 뒤쪽 페이지까지 자주 조회할 때
+
 만약 사용자가 ‘다음’ 버튼을 계속 클릭해서 뒤쪽으로 많이 이동하는 업무라면 위 쿼리는 비효율적이다. 인덱스 도움을 받아 NOSORT 방식으로 처리하더라도 앞에서 읽었던 레코드들을 계속 반복적으로 액세스해야 하기 때문이다. 인덱스마저 없다면 전체 조회 대상 집합을 매번 반복적으로 액세스하게 된다. 뒤쪽의 어떤 페이지로 이동하더라도 빠르게 조회되도록 구현해야 한다면? 앞쪽 레코드를 스캔하지 않고 해당 페이지 레코드로 바로 찾아가도록 구현해야 한다. 아래는 첫 번째 페이지를 출력하고 나서 ‘다음’ 버튼을 누를 때의 구현 예시다. 한 페이지에 10건씩 출력하는 것으로 가정하자.
 
 SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM ( SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM 시간별종목거래 A WHERE :페이지이동 = 'NEXT' AND 종목코드 = :isu_cd AND 거래일시 >= :trd_time ORDER BY 거래일시 ) WHERE ROWNUM <= 11 Execution Plan ------------------------------------------------------------- 0 SELECT STATEMENT Optimizer=ALL_ROWS (Cost=5 Card=1 Bytes=49) 1 0 COUNT (STOPKEY) 2 1 VIEW (Cost=5 Card=1 Bytes=49) 3 2 FILTER 4 3 TABLE ACCESS (BY INDEX ROWID) OF '시간별종목거래' (TABLE) (Card=1 Bytes=56) 5 4 INDEX (RANGE SCAN) OF '시간별종목거래\_PK' (INDEX (UNIQUE)) (Card=1)
@@ -96,15 +98,17 @@ SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM ( SELECT 거�
 
 < 첫 화면이거나, '다음(▶)' 버튼을 클릭했을 때 > SELECT TOP 11 거래일시, 체결건수, 체결수량, 거래대금 FROM 시간별종목거래 A WHERE :페이지이동 = 'NEXT' AND 종목코드 = :isu_cd AND 거래일시 >= :trd_time ORDER BY 거래일시 ; < '이전(◀)' 버튼을 클릭했을 때 > SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM ( SELECT TOP 11 거래일시, 체결건수, 체결수량, 거래대금 FROM 시간별종목거래 A WHERE :페이지이동 = 'PREV' AND 종목코드 = :isu_cd AND 거래일시 <= :trd_time ORDER BY 거래일시 DESC ) ORDER BY 거래일시 ;
 
-다. Union All 활용
+### 다. Union All 활용
+
 방금 설명한 방식은 사용자가 어떤 버튼(조회, 다음, 이전)을 눌렀는지에 따라 별도의 SQL을 호출하는 방식이다. Union All을 활용하면 아래와 같이 하나의 SQL로 처리하는 것도 가능하다.
 
 SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM ( SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM 시간별종목거래 WHERE :페이지이동 = 'NEXT' -- 첫 페이지 출력 시에도 'NEXT' 입력 AND 종목코드 = :isu_cd AND 거래일시 >= :trd_time ORDER BY 거래일시 ) WHERE ROWNUM <= 11 UNION ALL SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM ( SELECT 거래일시, 체결건수, 체결수량, 거래대금 FROM 시간별종목거래 WHERE :페이지이동 = 'PREV' AND 종목코드 = :isu_cd AND 거래일시 <= :trd_time ORDER BY 거래일시 DESC ) WHERE ROWNUM <= 11 ORDER BY 거래일시
 
-1. 윈도우 함수 활용
-   초기 RDBMS에서는 행(Row) 간 연산을 할 수 없다는 제약 때문에 복잡한 업무를 집합적으로 처리하는 데 한계가 많았다. 이 때문에 앞서 소개한 데이터 복제 기법을 이용해 SQL을 복잡하고 길게 작성해야 했고, 이마저도 어려울 땐 절차적 방식으로 프로그래밍 하곤 했다. 물론 지금도 행 간 연산을 지원하지 않지만 윈도우 함수(Window Function)가 도입되면서 복잡한 SQL을 어느 정도 단순화할 수 있게 되었다. Oracle에 의해 처음 소개된 윈도우 함수(Oracle에서는 ‘분석 함수(Analytic Function)’라고 함)가 지금은 ANSI 표준으로 채택돼 대부분 DBMS에서 지원하고 있다. 분석함수에 대해서는 2과목에서 이미 설명하였으므로 여기서는 이를 활용한 사례를 간단히 살펴보기로 하자. [그림 Ⅲ-5-4] 좌측처럼 장비측정 결과를 저장하는 테이블이 있다. 일련번호를 1씩 증가시키면서 측정값을 입력하고, 상태코드는 장비상태가 바뀔 때만 저장한다.
+# 5. 윈도우 함수 활용
 
-[그림 Ⅲ-5-4] 장비측정 결과
+초기 RDBMS에서는 행(Row) 간 연산을 할 수 없다는 제약 때문에 복잡한 업무를 집합적으로 처리하는 데 한계가 많았다. 이 때문에 앞서 소개한 데이터 복제 기법을 이용해 SQL을 복잡하고 길게 작성해야 했고, 이마저도 어려울 땐 절차적 방식으로 프로그래밍 하곤 했다. 물론 지금도 행 간 연산을 지원하지 않지만 윈도우 함수(Window Function)가 도입되면서 복잡한 SQL을 어느 정도 단순화할 수 있게 되었다. Oracle에 의해 처음 소개된 윈도우 함수(Oracle에서는 ‘분석 함수(Analytic Function)’라고 함)가 지금은 ANSI 표준으로 채택돼 대부분 DBMS에서 지원하고 있다. 분석함수에 대해서는 2과목에서 이미 설명하였으므로 여기서는 이를 활용한 사례를 간단히 살펴보기로 하자. [그림 Ⅲ-5-4] 좌측처럼 장비측정 결과를 저장하는 테이블이 있다. 일련번호를 1씩 증가시키면서 측정값을 입력하고, 상태코드는 장비상태가 바뀔 때만 저장한다.
+
+![그림 Ⅲ-5-4](https://dataonair.or.kr/publishing/img/knowledge/SQL_503.jpg)
 
 그런데 장비측정 결과를 조회할 땐, 사용자가 [그림 Ⅲ-5-4] 우측과 같이 출력해 주길 원한다. 즉, 상태코드가 NULL이면 가장 최근에 상태코드가 바뀐 레코드의 값을 보여주는 식이다. 이를 구현하기 위해 가장 쉽게 생각할 수 있는 방법은 다음과 같다.
 
@@ -118,12 +122,13 @@ select 일련번호, 측정값 ,(select /_+ index_desc(장비측정 장비측정
 
 select 일련번호, 측정값 , last_value(상태코드 ignore nulls) over(order by 일련번호 rows between unbounded preceding and current row) 상태코드 from 장비측정 order by 일련번호
 
-6. With 구문 활용
-   With 구문을 Oracle은 9i 버전부터, SQL Server는 2005 버전부터 지원하기 시작했다. With 절을 처리하는 DBMS 내부 실행 방식에는 아래 2가지가 있다.
+# 6. With 구문 활용
 
-Materialize 방식 : 내부적으로 임시 테이블을 생성함으로써 반복 재사용
-Inline 방식 : 물리적으로 임시 테이블을 생성하지 않으며, 참조된 횟수만큼 런타임 시 반복 수행. SQL문에서 반복적으로 참조되는 집합을 미리 선언함으로써 코딩을 단순화하는 용도(인라인 뷰와는, 메인 쿼리에서 여러 번 참조가 가능하다는 점에서 다름)
-Oracle은 위 2가지 방식을 모두 지원하지만, SQL Server는 Inline 방식으로만 실행된다. Oracle의 경우 실행방식을 상황에 따라 옵티마이저가 결정하며, 필요하다면 사용자가 힌트(materialize, inline)로써 지정할 수도 있다. Materialize 방식의 With절을 통해 생성된 임시 데이터는 영구적인 오브젝트가 아니어서, With절을 선언한 SQL문이 실행되는 동안만 유지된다. With절을 2개 이상 선언할 수 있으며, With절 내에서 다른 With절을 참조할 수도 있다. 배치 프로그램에서 특정 데이터 집합을 반복적으로 사용하거나, 전체 처리 흐름을 단순화시킬 목적으로 임시 테이블을 자주 활용하곤 하는데, Materialize 방식의 With 절을 이용하면 명시적으로 오브젝트를 생성하지 않고도 같은 처리를 할 수 있다. 아래는 With 절을 이용해 대용량 데이터를 빠르게 처리한 튜닝 사례다. 고객 테이블에는 2천만 건 이상, 카드 테이블에는 1억t>
+With 구문을 Oracle은 9i 버전부터, SQL Server는 2005 버전부터 지원하기 시작했다. With 절을 처리하는 DBMS 내부 실행 방식에는 아래 2가지가 있다.
+
+- Materialize 방식 : 내부적으로 임시 테이블을 생성함으로써 반복 재사용
+- Inline 방식 : 물리적으로 임시 테이블을 생성하지 않으며, 참조된 횟수만큼 런타임 시 반복 수행. SQL문에서 반복적으로 참조되는 집합을 미리 선언함으로써 코딩을 단순화하는 용도(인라인 뷰와는, 메인 쿼리에서 여러 번 참조가 가능하다는 점에서 다름)
+  Oracle은 위 2가지 방식을 모두 지원하지만, SQL Server는 Inline 방식으로만 실행된다. Oracle의 경우 실행방식을 상황에 따라 옵티마이저가 결정하며, 필요하다면 사용자가 힌트(materialize, inline)로써 지정할 수도 있다. Materialize 방식의 With절을 통해 생성된 임시 데이터는 영구적인 오브젝트가 아니어서, With절을 선언한 SQL문이 실행되는 동안만 유지된다. With절을 2개 이상 선언할 수 있으며, With절 내에서 다른 With절을 참조할 수도 있다. 배치 프로그램에서 특정 데이터 집합을 반복적으로 사용하거나, 전체 처리 흐름을 단순화시킬 목적으로 임시 테이블을 자주 활용하곤 하는데, Materialize 방식의 With 절을 이용하면 명시적으로 오브젝트를 생성하지 않고도 같은 처리를 할 수 있다. 아래는 With 절을 이용해 대용량 데이터를 빠르게 처리한 튜닝 사례다. 고객 테이블에는 2천만 건 이상, 카드 테이블에는 1억t>
 
 with 위험고객카드 as ( select 카드.카드번호객여부 = 'Y' and 고객.고객번호 = 카드발급.고객번호 ) select v._ from ( select a.카드번호 as 카드번호 , sum(a.거래금액) as 거래금액 , null as 현금서비스잔액 , null as 해외거래금액 from 카드거래내역 a , 위험고객카드 b where 조건 group by a.카드번호 union all select a.카드번호 as 카드번호 , null as 현금서비스잔액 , sum(amt) as 현금서비스금액 , null as 해외거래금액 from ( select a.카드번호 as 카드번호 , sum(a.거래금액) as amt from 현금거래내역 a , 위험고객카드 b where 조건 group by a.카드번호 union all select a.카드번호 as 카드번호 , sum(a.결재금액) _ -1 as amt from 현금결재내역 a , 위험고객카드 b where 조건 group by a.카드번호 ) a group by a.카드번호 union all select a.카드번호 as 카드번호 , null as 현금서비스잔액 , null as 현금서비스금액 , sum(a.거래금액) as 해외거래금액 from 해외거래내역 a , 위험고객카드 b where 조건 group by a.카드번호 ) v Execution Plan ------------------------------------------------------------- TEMP TABLE TRANSFORMATION → 임시테이블 생성 LOAD AS SELECT VIEW (Cost=94K Card=5K Bytes=345K) UNION-ALL SORT (GROUP BY) (Cost=57K Card=1 Bytes=120) HASH JOIN (Cost=57K Card=1 Bytes=120) PARTITION RANGE (SINGLE) PARTITION HASH (ALL) TABLE ACCESS (FULL) OF '카드거래내역' VIEW (Cost=50 Card=833K Bytes=13M) TABLE ACCESS (FULL) OF 'SYS.SYS_TEMP_0FD9D6B4E_4C0C42BA' → 임시 테이블 사용 SORT (GROUP BY) (Cost=36K Card=746 Bytes=20K) VIEW (Cost=36K Card=746 Bytes=20K) UNION-ALL SORT (GROUP BY) (Cost=34K Card=1 Bytes=74) HASH JOIN (Cost=34K Card=1 Bytes=74) PARTITION RANGE (ITERATOR) PARTITION HASH (ALL) TABLE ACCESS (FULL) OF '현금거래내역' (Cost=34K Card=1 Bytes=58) VIEW (Cost=50 Card=833K Bytes=13M) TABLE ACCESS (FULL) OF 'SYS.SYS_TEMP_0FD9D6B4E_4C0C42BA' → 임시 테이블 사용 SORT (GROUP BY) (Cost=2K Card=745 Bytes=38K) HASH JOIN (Cost=2K Card=746 Bytes=38K) …
 
