@@ -1,13 +1,15 @@
-1. 데이터베이스 Call 종류
-   가. SQL 커서에 대한 작업 요청에 따른 구분
-   Parse Call : SQL 파싱을 요청하는 Call
-   Execute Call : SQL 실행을 요청하는 Call
-   Fetch Call : SELECT문의 결과 데이터 전송을 요청하는 Call
-   select cust_nm, birthday from customer where cust_id = :cust_id call count cpu elapsed disk query current rows ----- ----- ----- ------ ---- ----- ------ ----- Parse 1 0.00 0.00 0 0 0 0 Execute 5000 0.18 0.14 0 0 0 0 Fetch 5000 0.21 0.25 0 20000 0 50000 ----- ----- ----- ------ ---- ----- ------ ----- total 10001 0.39 0.40 0 20000 0 50000
+# 1. 데이터베이스 Call 종류
 
-나. Call 발생 위치에 따른 구분
+### 가. SQL 커서에 대한 작업 요청에 따른 구분
 
-1. User Call
+- Parse Call : SQL 파싱을 요청하는 Call
+- Execute Call : SQL 실행을 요청하는 Call
+- Fetch Call : SELECT문의 결과 데이터 전송을 요청하는 Call
+- select cust_nm, birthday from customer where cust_id = :cust_id call count cpu elapsed disk query current rows ----- ----- ----- ------ ---- ----- ------ ----- Parse 1 0.00 0.00 0 0 0 0 Execute 5000 0.18 0.14 0 0 0 0 Fetch 5000 0.21 0.25 0 20000 0 50000 ----- ----- ----- ------ ---- ----- ------ ----- total 10001 0.39 0.40 0 20000 0 50000
+
+### 나. Call 발생 위치에 따른 구분
+
+#### 1. User Call
 
 DBMS 외부로부터 요청되는 Call을 말한다. 동시 접속자 수가 많은 Peak 시간대에 시스템 확장성을 떨어뜨리는 가장 큰 요인 중 한 가지는 User Call이다. User Call이 많이 발생하도록 개발된 프로그램은 결코 성능이 좋을 수 없고, 이는 개발자의 기술력에 의해서도 좌우되지만 많은 경우 애플리케이션 설계와 프레임워크 기술구조에 기인한다. 이를테면, Array Processing을 제대로 지원하지 않는 프레임워크, 화면 페이지 처리에 대한 잘못 설계된 표준가이드, 사용자 정의 함수/프로시저에 대한 무조건적인 제약 등이 그것이다. 그리고 프로시저 단위 모듈을 지나치게 잘게 쪼개서 SQL을 건건이 호출하도록 설계하는 것도 대표적이다. DBMS 성능과 확장성(Scalability)을 높이려면 User Call을 최소화하려는 노력이 무엇보다 중요하며, 이를 위해 아래와 같은 기술요소를 적극적으로 활용해야만 한다.
 
@@ -19,9 +21,11 @@ Array Processing : Array 단위 Fetch, Bulk Insert/Update/Delete
 
 DBMS 내부에서 발생하는 Call을 말한다. SQL 파싱과 최적화 과정에서 발생하는 데이터 딕셔너리 조회, 사용자 정의 함수/프로시저 내에서의 SQL 수행이 여기에 해당한다. Recursive Call을 최소화하려면, 바인드 변수를 적극적으로 사용해 하드파싱 발생횟수를 줄여야 한다. 그리고 사용자 정의 함수와 프로시저가 어떤 특징을 가지며 내부적으로 어떻게 수행되는지를 잘 이해하고 시의 적절하게 사용해야만 한다. 무조건 사용하지 못하도록 제약하거나 무분별하게 사용하지 말아야 한다는 뜻이다.
 
-2. 데이터베이스 Call과 성능
-   가. One SQL 구현의 중요성
-   루프를 돌면서 여러 작업을 반복 수행하는 프로그램을 One SQL로 구현했을 때 얼마나 놀라운 성능 개선 효과가 나타나는지 경험해 본 적이 있는가? 있다면 그 원리가 무엇이라고 생각하는가? 그것은 방금 설명한 데이터베이스 Call 횟수를 줄인 데에 있다. 1번과 10번, 10번과 100번의 차이는 크지 않지만 1번과 10만 번, 1번과 100만 번의 차이는 실로 엄청나다. 아래 JAVA 소스를 예제로 살펴보자.
+# 2. 데이터베이스 Call과 성능
+
+### 가. One SQL 구현의 중요성
+
+루프를 돌면서 여러 작업을 반복 수행하는 프로그램을 One SQL로 구현했을 때 얼마나 놀라운 성능 개선 효과가 나타나는지 경험해 본 적이 있는가? 있다면 그 원리가 무엇이라고 생각하는가? 그것은 방금 설명한 데이터베이스 Call 횟수를 줄인 데에 있다. 1번과 10번, 10번과 100번의 차이는 크지 않지만 1번과 10만 번, 1번과 100만 번의 차이는 실로 엄청나다. 아래 JAVA 소스를 예제로 살펴보자.
 
 public class JavaLoopQuery{ public static void insertData( Connection con , String param1 , String param2 , String param3 , long param4) throws Exception{ String SQLStmt = "INSERT INTO 납입방법별\_월요금집계 " + "(고객번호, 납입월, 납입방법코드, 납입금액) " + "VALUES(?, ?, ?, ?)"; PreparedStatement st = con.prepareStatement(SQLStmt); st.setString(1, param1); st.setString(2, param2); st.setString(3, param3); st.setLong(4, param4); st.execute(); st.close(); } public static void execute(Connection con, String input_month) throws Exception { String SQLStmt = "SELECT 고객번호, 납입월, 지로, 자동이체, 신용카드, 핸드폰, 인터넷 " + "FROM 월요금납부실적 " + "WHERE 납입월 = ?"; PreparedStatement stmt = con.prepareStatement(SQLStmt); stmt.setString(1, input_month); ResultSet rs = stmt.executeQuery(); while(rs.next()){ String 고객번호 = rs.getString(1); String 납입월 = rs.getString(2); long 지로 = rs.getLong(3); long 자동이체 = rs.getLong(4); long 신용카드 = rs.getLong(5); long 핸드폰 = rs.getLong(6); long 인터넷 = rs.getLong(7); if(지로 > 0) insertData (con, 고객번호, 납입월, "A", 지로); if(자동이체 > 0) insertData (con, 고객번호, 납입월, "B", 자동이체); if(신용카드 > 0) insertData (con, 고객번호, 납입월, "C", 신용카드); if(핸드폰 > 0) insertData (con, 고객번호, 납입월, "D", 핸드폰); if(인터넷 > 0) insertData (con, 고객번호, 납입월, "E", 인터넷); } rs.close(); stmt.close(); } static Connection getConnection() throws Exception { …… } static void releaseConnection(Connection con) throws Exception { …… } public static void main(String[] args) throws Exception{ Connection con = getConnection(); execute(con, "200903"); releaseConnection(con); } }
 
@@ -33,7 +37,8 @@ public class JavaLoopQuery{ public static void insertData( Connection con , Stri
 
 public class JavaOneSQL{ public static void execute(Connection con, String input*month) throws Exception { String SQLStmt = "INSERT INTO 납입방법별*월요금집계" + "(납입월,고객번호,납입방법코드,납입금액) " + "SELECT x.납입월, x.고객번호, CHR(64 + Y.NO) 납입방법코드 " + " , DECODE(Y.NO, 1, 지로, 2, 자동이체, 3, 신용카드, 4, 핸드폰, 5, 인터넷) " + "FROM 월요금납부실적 x, (SELECT LEVEL NO FROM DUAL CONNECT BY LEVEL <= 5) y " + "WHERE x.납입월 = ? " + "AND y.NO IN ( DECODE(지로, 0, NULL, 1), DECODE(자동이체, 0, NULL, 2) " + " , DECODE(신용카드, 0, NULL, 3) , DECODE(핸드폰, 0, NULL, 4) " + " , DECODE(인터넷, 0, NULL, 5) )" ; PreparedStatement stmt = con.prepareStatement(SQLStmt); stmt.setString(1, input_month); stmt.executeQuery(); stmt.close(); } static Connection getConnection() throws Exception { …… } static void releaseConnection(Connection con) throws Exception { …… } public static void main(String[] args) throws Exception{ Connection con = getConnection(); execute(con, "200903"); releaseConnection(con); } }
 
-나. 데이터베이스 Call과 시스템 확장성
+### 나. 데이터베이스 Call과 시스템 확장성
+
 데이터베이스 Call은 개별 프로그램의 수행 속도에 큰 영향을 미칠 뿐만 아니라 궁극적으로 시스템 전체의 확장성에 영향을 미친다. 인터넷 쇼핑몰에서 조회한 상품 중 일부를 선택한 후 위시리스트(WishList)에 등록하는 프로그램을 예로 들어 보자. ‘위시리스트’ 버튼을 클릭할 때 수행되는 프로그램을 아래 처럼 구현했다면, 선택한 상품이 5개일 때 메소드(method)도 5번 호출해야 하기 때문에 Parse Call과 Execute Call이 각각 5번씩 발생한다.
 
 void insertWishList ( String p_custid , String p_goods_no ) { SQLStmt = "insert into wishlist " + "select custid, goods_no " + "from cart " + "where custid = ? " + "and goods_no = ? " ; stmt = con.preparedStatement(SQLStmt); stmt.setString(1, p_custid); stmt.setString(2, p_goods_no); stmt.execute(); }
@@ -42,8 +47,9 @@ void insertWishList ( String p_custid , String p_goods_no ) { SQLStmt = "insert 
 
 void insertWishList ( String p_custid , String[] p_goods_no ) { SQLStmt = "insert into wishlist " + "select custid, goods_no " + "from cart " + "where custid = ? " + "and goods_no in ( ?, ?, ?, ?, ? )" ; stmt = con.preparedStatement(SQLStmt); stmt.setString(1, p_custid); for(int i=0; i < 5; i++){ stmt.setString(i+2, p_goods_no[i]); } stmt.execute(); }
 
-3. Array Processing 활용
-   Array Processing 기능을 활용하면 한 번의 SQL(INSERT/UPDATE/DELETE) 수행으로 다량의 레코드를 동시에 처리할 수 있다. 이는 네트워크를 통한 데이터베이스 Call을 줄이고, 궁극적으로 SQL 수행시간과 CPU 사용량을 획기적으로 줄여준다. 앞서 보았던 ‘납입방법별\_월요금집계’ 테이블 가공 사례에 Array Processing 기법을 적용하면 다음과 같다.
+# 3. Array Processing 활용
+
+Array Processing 기능을 활용하면 한 번의 SQL(INSERT/UPDATE/DELETE) 수행으로 다량의 레코드를 동시에 처리할 수 있다. 이는 네트워크를 통한 데이터베이스 Call을 줄이고, 궁극적으로 SQL 수행시간과 CPU 사용량을 획기적으로 줄여준다. 앞서 보았던 ‘납입방법별\_월요금집계’ 테이블 가공 사례에 Array Processing 기법을 적용하면 다음과 같다.
 
 1 public class JavaArrayProcessing{ 2 public static void insertData( Connection con 3 , PreparedStatement st 4 , String param1 5 , String param2 6 , String param3 7 , long param4) throws Exception{ 8 st.setString(1, param1); 9 st.setString(2, param2); 10 st.setString(3, param3); 11 st.setLong(4, param4); 12 st.addBatch(); 13 } 14 15 public static void execute(Connection con, String input*month) 16 throws Exception { 17 long rows = 0; 18 String SQLStmt1 = "SELECT 고객번호, 납입월" 19 + ", 지로, 자동이체, 신용카드, 핸드폰, 인터넷 " 20 + "FROM 월요금납부실적 " 21 + "WHERE 납입월 = ?"; 22 23 String SQLStmt2 = "INSERT INTO 납입방법별*월요금집계 " 24 + "(고객번호, 납입월, 납입방법코드, 납입금액) " 25 + "VALUES(?, ?, ?, ?)"; 26 27 con.setAutoCommit(false); 28 29 PreparedStatement stmt1 = con.prepareStatement(SQLStmt1); 30 PreparedStatement stmt2 = con.prepareStatement(SQLStmt2); 31 stmt1.setFetchSize(1000); 32 stmt1.setString(1, input_month); 33 ResultSet rs = stmt1.executeQuery(); 34 while(rs.next()){ 35 String 고객번호 = rs.getString(1); 36 String 납입월 = rs.getString(2); 37 long 지로 = rs.getLong(3); 38 long 자동이체 = rs.getLong(4); 39 long 신용카드 = rs.getLong(5); 40 long 핸드폰 = rs.getLong(6); 41 long 인터넷 = rs.getLong(7); 42 43 if(지로 > 0) 44 insertData (con, stmt2, 고객번호, 납입월, "A", 지로); 45 46 if(자동이체 > 0) 47 insertData (con, stmt2, 고객번호, 납입월, "B", 자동이체); 48 49 if(신용카드 > 0) 50 insertData (con, stmt2, 고객번호, 납입월, "C", 신용카드); 51 52 if(핸드폰 > 0) 53 insertData (con, stmt2, 고객번호, 납입월, "D", 핸드폰); 54 55 if(인터넷 > 0) 56 insertData (con, stmt2, 고객번호, 납입월, "E", 인터넷); 57 58 if(++rows%1000 == 0) stmt2.executeBatch(); 59 60 } 61 62 rs.close(); 63 stmt1.close(); 64 65 stmt2.executeBatch(); 66 stmt2.close(); 67 68 con.commit(); 69 con.setAutoCommit(true); 70 } 71 72 static Connection getConnection() throws Exception { } 73 static void releaseConnection(Connection con) throws Exception { …… } 74 75 public static void main(String[] args) throws Exception{ 76 Connection con = getConnection(); 77 execute(con, "200903"); 78 releaseConnection(con); 79 } 80 }
 
@@ -55,9 +61,11 @@ DECLARE l_fetch_size NUMBER DEFAULT 1000; -- 1,000건씩 Array 처리 CURSOR c I
 
 BULK COLLECT와 FORALL 구문에 대한 자세한 설명은 매뉴얼을 참조하기 바란다. 그리고 Array Processing 기법을 지원하는 인터페이스가 개발 언어마다 다르므로 API를 통해 반드시 확인하고 적극적으로 활용하기 바란다.
 
-4. Fetch Call 최소화
-   가. 부분범위처리 원리
-   현재 자신이 사용하고 있는 시스템에서 가장 큰 테이블을 아무 조건절 없이 쿼리해 보자. 테이블에 데이터가 아무리 많아도 엔터를 누르자마자 결과가 출력되기 시작하는 것을 볼 수 있을 것이다. SQL Server를 사용 중이라면 쿼리 분석기(Query Analyzer)의 Text 모드에서 테스트하기 바란다. 데이터 양과 무관하게 이처럼 빠른 응답속도를 보일 수 있는 원리가 무엇일까?
+# 4. Fetch Call 최소화
+
+#### 가. 부분범위처리 원리
+
+현재 자신이 사용하고 있는 시스템에서 가장 큰 테이블을 아무 조건절 없이 쿼리해 보자. 테이블에 데이터가 아무리 많아도 엔터를 누르자마자 결과가 출력되기 시작하는 것을 볼 수 있을 것이다. SQL Server를 사용 중이라면 쿼리 분석기(Query Analyzer)의 Text 모드에서 테스트하기 바란다. 데이터 양과 무관하게 이처럼 빠른 응답속도를 보일 수 있는 원리가 무엇일까?
 
 [그림 Ⅲ-1-9] 부분범위처리
 집을 짓는 공사장을 예로 들어 보자. [그림 Ⅲ-1-9]를 보면 미장공이 시멘트를 이용해 벽돌을 쌓는 동안 운반공은 수레를 이용해 벽돌을 일정량씩 나누어 운반하고 있다. 쌓여 있는 벽돌을 한 번에 실어 나를 수 없기 때문이다. 운반공은 미장공이 벽돌을 더 가져오라는 요청(→ Fetch Call)이 있을 때만 벽돌을 실어 나른다. 추가 요청이 없으면 운반작업은 거기서 멈춘다. DBMS도 이처럼 데이터를 클라이언트에게 전송할 때 일정량씩 나누어 전송한다. Oracle의 경우 ArraySize(또는 FetchSize) 설정을 통해 운반단위를 조절할 수 있다. 예를 들어, SQL\*Plus에서 ArraySize를 변경하는 명령어는 다음과 같다.
@@ -70,7 +78,8 @@ call count cpu elapsed disk query current rows ----- ---- ----- ------ ----- ---
 
 30,000개 로우를 읽기 위해 Fetch Call이 301번 발생한 것만 보고도 ArraySize가 100으로 설정된 상태에서 수행된 쿼리임을 짐작할 수 있다. SQL Server의 경우 네트워크 패키지 크기로 운반단위를 조절하는데, 쿼리 분석기(Query Analyzer) 옵션에서 ‘네트워크 패키지 크기’ 항목을 보면 기본 값이 4,096 바이트로 설정된 것을 볼 수 있다. (참고로, Oracle도 Array 크기의 데이터를 내부적으로 다시 SDU(Session Data Unit, Session 레이어), TDU(Transport Data Unit, Transport 레이어) 단위로 나누어 전송한다. ArraySize를 작게 설정하면 하나의 네트워크 패킷에 담아 전송하겠지만, 크게 설정하면 여러 개 패킷으로 나누어 전송할 수 밖에 없음은 당연하다.) 전체 결과집합 중 아직 전송하지 않은 분량이 많이 남아있어도 클라이언트로부터 추가 Fetch Call을 받기 전까지 서버는 그대로 멈춰 서서 기다린다. 이처럼 쿼리 결과집합을 전송할 때, 전체 데이터를 연속적으로 전송하지 않고 사용자로부터 Fetch Call이 있을 때마다 일정량씩 나누어서 전송하는 것을 이른바 ‘부분범위처리’라고 한다. OLTP성 업무에서는 쿼리 결과집합이 아주 많아도 그 중 일부만 Fetch해서 보여주고 멈춰도 되는 업무가 많다. 화면상에서 수천 수만 건을 일일이 스크롤하며 데이터를 보는 사용자는 거의 없기 때문이다. 사용자가 ‘다음’ 버튼을 클릭하거나 그리드 스크롤을 내릴 때만 추가적인 Fetch Call을 일으켜 필요한 만큼 더 가져오면 된다. 물론 커서를h Call이 아니라 별도의 쿼리 수행을 통해 나머지??른 개념으로 이해해야 한다.) 이런 화면 처리가 가능한 업무라면, 출력 대상 레코드가 많을수록 Array를 빨리 채울 수 있어 쿼리 응답 속도도 그만큼 빨라진다. 잘 설계된 인덱스와 부분범위처리 방식을 이용해 대용량 OLTP 환경에서 극적인 성능개선 효과를 얻을 수 있는 원리가 여기에 숨어있다. 참고로, 출력 대상 레코드가 많을수록 응답 속도가 빨라지는 것은 부분범위처리가 가능한 업무에만 해당한다. 결과집합 전체를 Fetch 하는 DW/OLAP성 업무나 서버 내에서 데이터를 가공하는 프로그램에선 결과집합이 많을수록 더 빨라지는 일은 있을 수 없다. DBMS 서버가 부분범위처리 방식으로 데이터를 전송하는데도 어떤 개발팀은 결과를 모두 Fetch 하고서야 출력을 시작하도록 애플리케이션을 개발한다. 또 어떤 개발팀은 첫 화면부터 빠르게 출력을 시작하도록 하지만 사용자의 명시적인 Fetch 요청이 없어도 백그라운드에서 계속 Fetch Call을 일으켜 클라이언트 캐시에 버퍼링하도록 개발하기도 한다. SQL Server 개발 환경에서 가장 많이 사용되는 쿼리 분석기의 Grid 모드가 전자에 해당하기 때문에 SQL Server 사용자들은 부분범위처리 원리를 설명해도 쉽게 이해하지 못하는 경향이 있다. Oracle을 위한 쿼리 툴 중에도 부분범위처리를 활용하지 않고 결과집합 전체를 모았다가 출력하는 툴이 있다. 이것은 클라이언트 쿼리 툴의 특성일 뿐이며 모든 DBMS는 데이터를 일정량씩 나누어 전송한다. 여기서 강조하고자 하는 바는, 불필요한 데이터베이스 Call과 네트워크 부하를 일으켜선 결코 고성능 데이터베이스 애플리케이션을 구축하기 힘들다는 사실이다. 팀 단위의 소규모 애플리케이션을 개발 중이라면 모르겠지만, 전사적 또는 전국 단위 서비스를 제공하는 애플리케이션을 개발 중이라면 본 장에서 설명하는 아키텍처 기반 튜닝 원리를 정확히 이해하고 적용하려고 노력해야 한다.
 
-나. ArraySize 조정에 의한 Fetch Call 감소 및 블록 I/O 감소 효과
+### 나. ArraySize 조정에 의한 Fetch Call 감소 및 블록 I/O 감소 효과
+
 지금까지 설명한 부분범위처리 원리를 이해했다면, 네트워크를 통해 전송해야 할 데이터량에 따라 ArraySize를 조절할 필요가 있음을 직감했을 것이다. 예를 들어, 대량 데이터를 파일로 내려 받는다면 어차피 전체 데이터를 전송해야 하므로 가급적 값을 크게 설정해야 한다. ArraySize를 조정한다고 전송해야 할 총량이 줄지는 않지만, Fetch Call 횟수를 그만큼 줄일 수 있다. 반대로 앞쪽 일부 데이터만 Fetch하다가 멈추는 프로그램이라면 ArraySize를 작게 설정하는 것이 유리하다. 많은 데이터를 읽어 전송하고도 정작 사용되지 않는 비효율을 줄일 수 있기 때문이다. ArraySize를 증가시키면 네트워크 부하가 줄어들 뿐만 아니라 서버 프로세스가 읽어야 할 블록 개수까지 줄어드는 일거양득의 효과를 얻게 된다. ArraySize를 조정하는데 왜 블록 I/O가 줄어드는 것일까? [그림 Ⅲ-1-10]을 보면서 설명해 보자.
 
 [그림 Ⅲ-1-10] ArraySize와 블록 I/O
@@ -111,8 +120,9 @@ AP 서버 및 웹 서버 리소스 사용량 증가
 데이터를 소량씩 나누어 전송하므로 AP웹 서버 리소스 사용량 최소화
 결론적으로 말해, 조회할 데이터가 일정량 이상이고 수행빈도가 높다면 필수적으로 페이지 처리를 구현해야 한다. 효과적인 페이지 처리 구현 방안에 대해서는 5장 고급 SQL 튜닝에서 설명한다.
 
-6. 분산 쿼리
-   부하 분산, 재해 복구, 보안 등 여러 가지 목적으로 분산 환경의 데이터베이스를 구축하게 되는데, 어디나 분산 쿼리 성능 때문에 골머리를 앓는다. 특히 원격 조인이 자주 문제시되는데, 분산 DB 간 테이블을 조인할 때 성능을 높일 방안은 무엇일까? 아래 예를 보자.
+# 6. 분산 쿼리
+
+부하 분산, 재해 복구, 보안 등 여러 가지 목적으로 분산 환경의 데이터베이스를 구축하게 되는데, 어디나 분산 쿼리 성능 때문에 골머리를 앓는다. 특히 원격 조인이 자주 문제시되는데, 분산 DB 간 테이블을 조인할 때 성능을 높일 방안은 무엇일까? 아래 예를 보자.
 
 select channel_id, sum(quantity_sold) auantity_cold from order a, sales@lk_sales b where a.order_date between :1 and :2 and b.order_no = a.order no group by channel_id Rows Row Source Operation ----- --------------------------------------------- 5 SORT GROUP BY 10981 NESTED LOOPS 500000 REMOTE 10981 TABLE ACCESS BY INDEX ROWID ORDER 500000 INDEX UNIQUE SCAN (ORDER_PK)
 
@@ -124,17 +134,20 @@ select /_+ driving_site(b) _/ channel_id, sum(quantity_sold) auantity_cold from 
 
 인덱스를 이용해 939건의 order 데이터를 읽어 원격으로 보냈고, 거기서 처리가 완료된 5건만 전송받은 것을 확인할 수 있다. 분산 쿼리의 성능을 높이는 핵심 원리는, 네트워크를 통한 데이터 전송량을 줄이는 데에 있다.
 
-7. 사용자 정의 함수/프로시저의 특징과 성능
-   일반 프로그래밍 언어에서는 반복적으로 사용되는 소스 코드를 가급적 함수로써 모듈화하는 것을 권장한다. 하지만 DBMS 내부에서 수행되는 사용자 정의 함수/프로시저(User Defined Function/Procedure)를 그런 용도로 사용한다면 성능 때문에 큰 낭패를 볼 수 있다. 이유를 잘 설명하진 못하더라도 경험 많은 개발자들은 이미 그런 사실을 잘 알고 있다. 아래에서 설명하는 사용자 정의 함수/프로시저의 특징을 잘 파악한다면 오히려 그것을 잘 활용해 성능을 높일 수 있는 방안이 무엇인지 스스로 터득할 수 있을 것이다.
+# 7. 사용자 정의 함수/프로시저의 특징과 성능
 
-가. 사용자 정의 함수/프로시저의 특징
+일반 프로그래밍 언어에서는 반복적으로 사용되는 소스 코드를 가급적 함수로써 모듈화하는 것을 권장한다. 하지만 DBMS 내부에서 수행되는 사용자 정의 함수/프로시저(User Defined Function/Procedure)를 그런 용도로 사용한다면 성능 때문에 큰 낭패를 볼 수 있다. 이유를 잘 설명하진 못하더라도 경험 많은 개발자들은 이미 그런 사실을 잘 알고 있다. 아래에서 설명하는 사용자 정의 함수/프로시저의 특징을 잘 파악한다면 오히려 그것을 잘 활용해 성능을 높일 수 있는 방안이 무엇인지 스스로 터득할 수 있을 것이다.
+
+### 가. 사용자 정의 함수/프로시저의 특징
+
 사용자 정의 함수/프로시저는 내장함수처럼 Native 코드로 완전 컴파일된 형태가 아니어서 가상머신(Virtual Machine) 같은 별도의 실행엔진을 통해 실행된다. 실행될 때마다 컨텍스트 스위칭(Context Switching)이 일어나며, 이 때문에 내장함수(Built-In)를 호출할 때와 비교해 성능을 상당히 떨어뜨린다. 예를 들어, 문자 타입의 일자 데이터를 날짜 타입으로 변환해 주는 to_char 함수를 바로 호출할 때와 아래와 같은 사용자 정의 함수를 호출할 때를 비교하면, 보통 5~10배 가량 느려지는 것을 확인할 수 있다.
 
 create or replace function date_to_char(p_dt date) return varchar2 as begin return to_char(p_dt, 'yyyy/mm/dd hh24:mi:ss'); end; /
 
 게다가, 메인 쿼리가 참조하는 사용자 정의 함수에 또 다른 쿼리문이 내장돼 있으면 수행 성능이 훨씬 나빠진다. 함수에 내장된 쿼리를 수행될 때마다 Execute Call, Fetch Call이 재귀적으로 일어나기 때문이다. 앞에서 잠시 언급한 Recursive Call이 반복적으로 일어나는 것이며, 다행히 Parse Call은 처음 수행할 때 한 번만 일어난다. 네트워크를 경유해 DBMS에 전달되는 User Call에 비해 Recursive Call의 성능 부하는 미미하다고 할 수 있지만, 가랑비에도 옷이 젖든 그 횟수가 무수히 반복되면 성능을 크게 떨어뜨릴 수 있다.
 
-나. 사용자 정의 함수/프로시저에 의한 성능 저하 해소 방안
+### 나. 사용자 정의 함수/프로시저에 의한 성능 저하 해소 방안
+
 주문 테이블에서 주문일자가 잘못된 데이터를 찾아 정제하려고 아래와 같은 사용자 정의 함수를 정의했다고 가정하자. 주문을 받지 않는 휴무일에 입력된 데이터도 정제 대상이므로 해당 일자가 휴무일 테이블에서 찾아지는지도 검사하도록 구현하였다.
 
 create or replace function 일자검사(p_date varchar2) return varchar2 as l_date varchar2(8); begin l_date := to_char(to_date(p_date, 'yyyymmdd'), 'yyyymmdd'); -- 일자 오류 시, Exception 발생 if l_date > to_char(trunc(sysdate), 'yyyymmdd') then return 'xxxxxxxx'; -- 미래 일자로 입력된 주문 데이터 end if; for i in (select 휴무일자 from 휴무일 where 휴무일자 = l_date) loop return 'xxxxxxxx'; -- 휴무일에 입력된 주문 데이터 end loop; return l_date; -- 정상적인 주문 데이터 exception when others then return '00000000'; -- 오류 데이터 end;
